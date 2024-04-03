@@ -1,0 +1,26 @@
+- name: create worker directory for ansible
+  file:
+    path: /var/www/worker
+    state: directory
+
+- name: extracting worker.tar to upload it
+  unarchive:
+    src: worker.tar
+    dest: /var/www/worker
+    remote_src: yes
+
+- name: install java
+  apt:
+    name: openjdk-11-jdk
+    state: present
+
+- name: install maven
+  apt:
+    name: maven
+    state: present
+
+- name: Start worker service
+  systemd:
+    name: worker
+    state: started
+    enabled: yes

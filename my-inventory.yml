@@ -1,0 +1,20 @@
+redis:
+  hosts:
+    redis:
+      ansible_host: #adress
+postgresql:
+  hosts:
+    postgresql:
+      ansible_host: #adress
+poll:
+  hosts:
+    poll:
+      ansible_host: #adress
+worker:
+  hosts:
+    worker:
+      ansible_host: #adress
+result:
+  hosts:
+    result:
+      ansible_host: #adress

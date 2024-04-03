@@ -1,0 +1,35 @@
+
+# - name: Setup and deploy application
+#   hosts: all
+#   become: true
+
+#   tasks:
+- name: Include base role
+  hosts: all
+  roles:
+    - base
+
+- name: Include postgresql role
+  hosts: postgresql
+  roles:
+    - postgresql
+
+- name: Include redis role
+  hosts: redis
+  roles:
+    - redis
+
+- name: Include poll role
+  hosts: poll
+  roles:
+    - poll
+
+- name: Include result role
+  hosts: result
+  roles:
+    - result
+
+- name: Include worker role
+  hosts: worker
+  roles:
+    - worker

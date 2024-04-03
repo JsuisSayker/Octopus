@@ -1,0 +1,26 @@
+- name: create result directory for ansible
+  file:
+    path: /var/www/result
+    state: directory
+
+- name: Exctracting result.tar to upload it
+  unarchive:
+    src: result.tar
+    dest: /var/www/result
+    remote_src: yes
+
+- name: install nodejs
+  apt:
+    name: nodejs
+    state: present
+
+- name: install npm
+  apt:
+    name: npm
+    state: present
+
+- name: Start result
+  service:
+    name: result
+    state: started
+    enabled: yes

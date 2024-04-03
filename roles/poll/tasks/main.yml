@@ -1,0 +1,23 @@
+- name: create poll directory for ansible
+  file:
+    path: /var/www/poll
+    state: directory
+
+- name: Exctracting poll.tar to upload it
+  unarchive:
+    src: poll.tar
+    dest: /var/www/poll
+    remote_src: yes
+
+- name: install pip3
+  apt: name=python3-pip state=present
+
+- name: install requirements
+  pip:
+    requirements: /var/www/poll/requirements.txt
+
+- name: Start poll
+  service:
+    name: poll
+    state: started
+    enabled: yes

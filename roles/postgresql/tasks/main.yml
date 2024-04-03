@@ -1,0 +1,58 @@
+- name: Ansible create directory postgresql
+  file:
+    path: /var/www/postgresql
+    state: directory
+
+- name: Install postgresql
+  apt:
+    name: postgresql
+    state: present
+
+- name: Install pip3
+  apt:
+    name: python3-pip
+    state: present
+
+- name: Install python3
+  apt:
+    name: python3-dev
+    state: present
+
+- name: Install psycopg2
+  pip:
+    name: psycopg2
+    state: present
+
+# - name: Copy file with owner and permissions
+#   ansible.builtin.copy:
+#     src: pg_hba.conf
+#     dest: /etc/postgresql/16/main/pg_hba.conf
+#     owner: root
+#     group: root
+#     mode: '0644'
+
+# - name: Copy file with owner and permissions
+#   ansible.builtin.copy:
+#     src: schema.sql
+#     dest: /var/www/postgresql/schema.sql
+#     owner: root
+#     group: root
+#     mode: '0644'
+
+
+- name: Create postgres database
+  postgresql_db:
+    name: "{{ DB_NAME }}"
+
+- name: Apply schema to database
+  postgresql_query:
+    path_to_script: /var/www/postgresql/schema.sql
+    as_single_query: true
+    db: "{{ DB_NAME }}"
+
+- name: Connect to database and setup all vars
+  postgresql_user:
+    db: "{{ DB_NAME }}"
+    name: "{{ DB_USERNAME }}"
+    password: "{{ DB_PASSWORD }}"
+    priv: "CONNECT/votes:ALL"

@@ -1,58 +1,95 @@
-- name: Ansible create directory postgresql
-  file:
-    path: /var/www/postgresql
-    state: directory
+- name: Importing the repository signing key
+  become: true
+  ansible.builtin.apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
 
-- name: Install postgresql
-  apt:
+- name: Adding PostgreSQL's repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main
+    state: present
+
+- name: Installing PostgreSQL 16
+  become: true
+  ansible.builtin.apt:
+    name: postgresql-16
+    state: present
+    update_cache: yes
+
+- name: Installing PostgreSQL client and other dependencies
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item }}"
+  with_items:
+    - postgresql-client
+    - python3-psycopg2
+    - acl
+
+- name: Set up postgresql authentication
+  become: true
+  copy:
+    src: ../files/pg_hba.conf
+    dest: /etc/postgresql/16/main/pg_hba.conf
+
+- name: Set up postgresql configuration file
+  become: true
+  ansible.builtin.template:
+    src: ../files/postgresql.conf
+    dest: /etc/postgresql/16/main/postgresql.conf
+
+- name: Set up postgresql schema
+  copy:
+    src: ../files/schema.sql
+    dest: /tmp/schema.sql
+  register: conf_files_installed
+
+- name: Ensure that postgresql is started
+  systemd_service:
     name: postgresql
-    state: present
+    state: started
+    enabled: true
 
-- name: Install pip3
-  apt:
-    name: python3-pip
-    state: present
+- name: Reloading PostgreSQL to apply all .conf files changes
+  become: true
+  ansible.builtin.systemd:
+    name: postgresql
+    state: restarted
+  when: conf_files_installed.changed
 
-- name: Install python3
-  apt:
-    name: python3-dev
-    state: present
-
-- name: Install psycopg2
-  pip:
-    name: psycopg2
-    state: present
-
-# - name: Copy file with owner and permissions
-#   ansible.builtin.copy:
-#     src: pg_hba.conf
-#     dest: /etc/postgresql/16/main/pg_hba.conf
-#     owner: root
-#     group: root
-#     mode: '0644'
-
-# - name: Copy file with owner and permissions
-#   ansible.builtin.copy:
-#     src: schema.sql
-#     dest: /var/www/postgresql/schema.sql
-#     owner: root
-#     group: root
-#     mode: '0644'
-
-
-- name: Create postgres database
-  postgresql_db:
-    name: "{{ DB_NAME }}"
-
-- name: Apply schema to database
-  postgresql_query:
-    path_to_script: /var/www/postgresql/schema.sql
-    as_single_query: true
-    db: "{{ DB_NAME }}"
-
-- name: Connect to database and setup all vars
+- name: Creating database user
+  become: true
+  become_user: postgres
   postgresql_user:
-    db: "{{ DB_NAME }}"
     name: "{{ DB_USERNAME }}"
     password: "{{ DB_PASSWORD }}"
-    priv: "CONNECT/votes:ALL"
+    role_attr_flags: NOSUPERUSER,NOCREATEDB
+    state: present
+
+- name: Creating the database
+  become: true
+  become_user: postgres
+  postgresql_db:
+    name: "{{ DB_NAME }}"
+    owner: "{{ DB_USERNAME }}"
+    state: present
+
+- name: Reading the SQL schema script content
+  ansible.builtin.slurp:
+    src: /tmp/schema.sql
+  register: schema_sql_content
+
+
+- name: Decode the SQL schema script content
+  ansible.builtin.set_fact:
+    schema_sql: "{{ schema_sql_content['content'] | b64decode }}"
+
+- name: Importing the SQL schema script
+  become: true
+  become_user: postgres
+  ansible.builtin.postgresql_query:
+    db: "{{ DB_NAME }}"
+    query: "{{ schema_sql }}"
+    login_user: "{{ DB_USERNAME }}"
+    login_password: "{{ DB_PASSWORD }}"
+  when: schema_sql_content.changed

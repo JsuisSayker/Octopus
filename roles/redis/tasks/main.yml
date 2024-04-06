@@ -1,32 +1,28 @@
-- name: Install redis
+- name: Installing redis
   become: true
-  apt:
+  ansible.builtin.apt:
     name: redis-server
-    # update_cache: yes
+    state: present
 
-- name: upload systemd service to server
-  copy:
-    src: redis.conf
+- name: Uploading systemd service to redis server
+  become: true
+  ansible.builtin.template:
+    src: ../files/redis.conf
     dest: /etc/redis/redis.conf
-    owner: redis
-    group: redis
-    mode: 0640
-  register: override
+  register: already_upload_service
 
-- name: stop redis
-  systemd:
+- name: Stop redis server
+  become: true
+  ansible.builtin.systemd:
     name: redis-server
     state: stopped
     enabled: yes
-  when: override.changed
+  when: already_upload_service.changed
 
-- name: start redis
-  systemd:
-    daemon_reload: yes
-  when: override.changed
-
-- name: start redis
-  systemd:
+- name: Start redis server
+  become: true
+  ansible.builtin.systemd:
     name: redis-server
     state: started
+    daemon_reload: yes
     enabled: yes

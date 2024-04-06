@@ -1,26 +1,47 @@
-- name: create result directory for ansible
-  file:
+- name: Ensure application directory exists
+  become: true
+  ansible.builtin.file:
     path: /var/www/result
     state: directory
+    owner: www-data
+    group: www-data
 
-- name: Exctracting result.tar to upload it
-  unarchive:
+- name: Extracting the result application
+  become: true
+  ansible.builtin.unarchive:
     src: result.tar
     dest: /var/www/result
-    remote_src: yes
+    owner: www-data
+    group: www-data
 
-- name: install nodejs
-  apt:
-    name: nodejs
+- name: Installing NodeJS and npm dependencies
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item }}"
     state: present
+  with_items:
+    - nodejs
+    - npm
+    - acl
+  register: installed_dependencies
 
-- name: install npm
-  apt:
-    name: npm
-    state: present
+- name: Installing the result application dependencies via npm
+  become: true
+  command: npm install
+  args:
+    chdir: /var/www/result
+  when: installed_dependencies.changed
 
-- name: Start result
-  service:
-    name: result
+- name: Uploading the template .service file
+  become: true
+  ansible.builtin.template:
+    src: ../files/result.service
+    dest: /etc/systemd/system/result.service
+
+- name: Ensure that result service is running
+  become: true
+  ansible.builtin.systemd:
+    name: result.service
     state: started
-    enabled: yes
+    enabled: true
+    daemon_reload: true

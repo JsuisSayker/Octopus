@@ -1,0 +1,14 @@
+[redisVM]
+redis ansible_host=172.232.45.94
+
+[postgresqlVM]
+postgresql ansible_host=172.234.57.63
+
+[pollVM]
+poll ansible_host=172.232.39.184
+
+[workerVM]
+worker ansible_host=172.233.246.181
+
+[resultVM]
+result ansible_host=172.233.249.55

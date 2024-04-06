@@ -2,7 +2,5 @@ setup_server.sh
 .mypy_cache
 B-DOP_poll_application
 B-DOP_poll_application.zip
-docker-key
-docker-key.pub
 password.txt
 production.yml

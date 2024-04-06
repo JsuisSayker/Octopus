@@ -1,26 +1,68 @@
-- name: create worker directory for ansible
-  file:
+- name: Ensure application directory exists
+  become: true
+  ansible.builtin.file:
     path: /var/www/worker
     state: directory
+    owner: www-data
+    group: www-data
 
-- name: extracting worker.tar to upload it
-  unarchive:
+- name: Extracting the worker application
+  become: true
+  ansible.builtin.unarchive:
     src: worker.tar
     dest: /var/www/worker
-    remote_src: yes
+    owner: www-data
+    group: www-data
 
-- name: install java
-  apt:
-    name: openjdk-11-jdk
-    state: present
-
-- name: install maven
-  apt:
+- name: Installing maven
+  become: true
+  ansible.builtin.apt:
     name: maven
     state: present
 
-- name: Start worker service
-  systemd:
-    name: worker
+- name: Checking if Java 21 is already downloaded
+  become: true
+  stat:
+    path: /var/www/worker/jdk-21_linux-x64_bin.deb
+  register: java_installed
+
+- name: Downloading Java 21
+  become: true
+  command: wget https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.deb
+  args:
+    chdir: /var/www/worker
+  when: not java_installed.stat.exists
+
+- name: Installing Java 21
+  become: true
+  command: sudo dpkg -i jdk-21_linux-x64_bin.deb
+  args:
+    chdir: /var/www/worker
+  when: not java_installed.stat.exists
+
+- name: Checking if the worker has already been built
+  become: true
+  stat:
+    path: /var/www/worker/target/worker.jar
+  register: worker_built
+
+- name: Building the worker
+  become: true
+  command: mvn install -f /var/www/worker/pom.xml
+  args:
+    chdir: /var/www/worker/
+  when: not worker_built.stat.exists
+
+- name: Uploading the template .service file
+  become: true
+  ansible.builtin.template:
+    src: ../files/worker.service
+    dest: /etc/systemd/system/worker.service
+
+- name: Ensure service is enabled and running
+  become: true
+  ansible.builtin.systemd:
+    name: worker.service
     state: started
-    enabled: yes
+    daemon_reload: true
+    enabled: true

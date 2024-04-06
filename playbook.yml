@@ -1,9 +1,3 @@
-
-# - name: Setup and deploy application
-#   hosts: all
-#   become: true
-
-#   tasks:
 - name: Include base role
   hosts: all
   roles:

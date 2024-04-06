@@ -1,0 +1,13 @@
+[Unit]
+Description=WorkerService
+
+[Service]
+Environment=REDIS_HOST={{ hostvars['redis'].ansible_host }}
+Environment=POSTGRES_USER={{ DB_USERNAME }}
+Environment=POSTGRES_PASSWORD={{ DB_PASSWORD }}
+Environment=POSTGRES_HOST={{ hostvars['postgresql'].ansible_host }}
+Environment=POSTGRES_PORT={{ DB_PORT }}
+Environment=POSTGRES_DB={{ DB_NAME }}
+ExecStart=java -jar /var/www/worker/target/worker-jar-with-dependencies.jar
+WorkingDirectory=/var/www/worker/target
+Restart=on-failure

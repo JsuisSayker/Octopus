@@ -1,23 +1,53 @@
-- name: create poll directory for ansible
-  file:
+- name: Ensure application directory exists
+  become: true
+  ansible.builtin.file:
     path: /var/www/poll
     state: directory
+    owner: www-data
+    group: www-data
 
-- name: Exctracting poll.tar to upload it
-  unarchive:
+- name: Extracting the poll application
+  become: true
+  ansible.builtin.unarchive:
     src: poll.tar
     dest: /var/www/poll
-    remote_src: yes
+    owner: www-data
+    group: www-data
 
-- name: install pip3
-  apt: name=python3-pip state=present
+- name: Installing python venv
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - python3-venv
+    - acl
 
-- name: install requirements
-  pip:
+- name: Creating a virtual environment for the app
+  become: true
+  become_user: www-data
+  ansible.builtin.command:
+    cmd: python3 -m venv /var/www/poll/venv
+  args:
+    creates: /var/www/poll/venv
+
+- name: Installing python dependencies
+  become: true
+  become_user: www-data
+  ansible.builtin.pip:
     requirements: /var/www/poll/requirements.txt
+    virtualenv: /var/www/poll/venv
 
-- name: Start poll
-  service:
-    name: poll
+- name: Uploading the template .service file
+  become: true
+  ansible.builtin.template:
+    src: ../files/poll.service
+    dest: /etc/systemd/system/poll.service
+
+- name: Ensure that result service is running
+  become: true
+  ansible.builtin.systemd:
+    name: poll.service
     state: started
-    enabled: yes
+    enabled: true
+    daemon_reload: true

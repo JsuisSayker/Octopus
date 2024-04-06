@@ -1,17 +1,7 @@
-- name: Install git
+- name: Install essential packages
   apt:
-    name: git
+    name: "{{ item }}"
     state: present
-    # update_cache: yes
-
-- name: Update and upgrade apt packages
-  become: true
-  apt:
-    upgrade: yes
-    # update_cache: yes
-    cache_valid_time: 4000
-
-- name: Upgrade all packages on servers
-  apt:
-    upgrade: dist
-    force_apt_get: yes
+  with_items:
+    - curl
+    - git
